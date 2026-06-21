@@ -141,25 +141,4 @@ async def cmd_search(message: Message):
         await message.answer("Misol: /search fayl_nomi")
         return
     keyword = f"%{args[1]}%"
-    uid = message.from_user.id
-    async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute(
-            "SELECT file_name, category, size, date FROM files WHERE user_id=? AND file_name LIKE ?",
-            (uid, keyword)
-        ) as cursor:
-            rows = await cursor.fetchall()
-
-    if not rows:
-        await message.answer("Topilmadi.")
-        return
-
-    text = ""
-    for name, cat, size, date in rows:
-        mb = round(size / 1024 / 1024, 2)
-        text += f"📁 {name}\n{mb} MB | {date}\n\n"
-    await message.answer(text[:4000])
-
-# ─── MAIN ───────────────────────────────────────────
-async def on_startup(_):
-    await create_db()
-    print("Bot ish​​​​​​​​​​​​​​​​
+    
