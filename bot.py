@@ -410,5 +410,13 @@ if __name__ == "__main__":
         host=WEBAPP_HOST,
         port=WEBAPP_PORT,
     )
+    async def on_startup(_):
+    await create_db()
+    print("Bot ishga tushdi!")
+
+if __name__ == "__main__":
+    from aiogram import executor
+    executor.start_polling(dp, on_startup=on_startup, skip_updates=True)
+
 
 
