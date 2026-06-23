@@ -384,6 +384,31 @@ async def cmd_stats(message: Message):
 async def on_startup(_):
     await create_db()
     print("Bot ishga tushdi!")
+from aiogram.utils.executor import start_webhook
+
+WEBHOOK_HOST = os.getenv("WEBHOOK_URL")
+WEBHOOK_PATH = f"/webhook/{BOT_TOKEN}"
+WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
+
+WEBAPP_HOST = "0.0.0.0"
+WEBAPP_PORT = int(os.getenv("PORT", 8000))
+
+async def on_startup(dp):
+    await create_db()
+    await bot.set_webhook(WEBHOOK_URL)
+    print("Bot ishga tushdi!")
+
+async def on_shutdown(dp):
+    await bot.delete_webhook()
 
 if __name__ == "__main__":
-    executor.start_polling(dp, on_startup=on_startup)
+    start_webhook(
+        dispatcher=dp,
+        webhook_path=WEBHOOK_PATH,
+        on_startup=on_startup,
+        on_shutdown=on_shutdown,
+        host=WEBAPP_HOST,
+        port=WEBAPP_PORT,
+    )
+
+
