@@ -1,0 +1,96 @@
+import asyncio
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.filters import CommandStart, Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage
+
+BOT_TOKEN = "8936447106:AAHe0USp85rMh0OniF-vQ3sdzSlR-jqdgDk"        # @BotFather
+OWNER_ID =  8526839139                # @userinfobot
+STORAGE_CHANNEL_ID = -1001234567890  # Kanal ID
+PIN_CODE = "20020110"                    # eski
+
+bot = Bot(8936447106:AAHe0USp85rMh0OniF-vQ3sdzSlR-jqdgDk)
+dp = Dispatcher(storage=MemoryStorage())
+authorized_users = set()
+
+class PinState(StatesGroup):
+    waiting = State()
+
+class SaveState(StatesGroup):
+    waiting = State()
+
+def owner_kb():
+    return ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="📤 Saqlash"), KeyboardButton(text="📂 Ko'rish")],
+        [KeyboardButton(text="🔍 Qidirish")]
+    ], resize_keyboard=True)
+
+def guest_kb():
+    return ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="📂 Ko'rish"), KeyboardButton(text="🔍 Qidirish")],
+        [KeyboardButton(text="🚪 Chiqish")]
+    ], resize_keyboard=True)
+
+@dp.message(CommandStart())
+async def start(message: Message, state: FSMContext):
+    uid = message.from_user.id
+    if uid == OWNER_ID:
+        authorized_users.add(uid)
+        await message.answer("👋 Xo'jayin, xush kelibsiz!", reply_markup=owner_kb())
+        return
+    if uid in authorized_users:
+        await message.answer("✅ Kirgansiz!", reply_markup=guest_kb())
+        return
+    await message.answer("🔐 PIN kodni kiriting:", reply_markup=ReplyKeyboardRemove())
+    await state.set_state(PinState.waiting)
+
+@dp.message(PinState.waiting)
+async def check_pin(message: Message, state: FSMContext):
+    if message.text.strip() == PIN_CODE:
+        authorized_users.add(message.from_user.id)
+        await state.clear()
+        await message.answer("✅ To'g'ri! Xush kelibsiz!", reply_markup=guest_kb())
+    else:
+        await message.answer("❌ Noto'g'ri PIN! Qayta:")
+
+@dp.message(F.text == "📤 Saqlash")
+async def save_start(message: Message, state: FSMContext):
+    if message.from_user.id != OWNER_ID:
+        await message.answer("⛔ Faqat xo'jayin!")
+        return
+    await message.answer("Yuboring (matn, fayl, rasm...):", reply_markup=ReplyKeyboardRemove())
+    await state.set_state(SaveState.waiting)
+
+@dp.message(SaveState.waiting)
+async def do_save(message: Message, state: FSMContext):
+    await message.forward(STORAGE_CHANNEL_ID)
+    await state.clear()
+    await message.answer("✅ Saqlandi!", reply_markup=owner_kb())
+
+@dp.message(F.text == "📂 Ko'rish")
+async def view(message: Message):
+    if message.from_user.id not in authorized_users:
+        await message.answer("🔐 /start")
+        return
+    await message.answer("⏳ Yuklanmoqda...")
+    count = 0
+    async for msg in bot.get_chat_history(STORAGE_CHANNEL_ID, limit=20):
+        await msg.forward(message.chat.id)
+        count += 1
+        await asyncio.sleep(0.3)
+    uid = message.from_user.id
+    await message.answer(f"✅ {count} ta element", reply_markup=owner_kb() if uid == OWNER_ID else guest_kb())
+
+@dp.message(F.text == "🚪 Chiqish")
+async def logout(message: Message, state: FSMContext):
+    authorized_users.discard(message.from_user.id)
+    await state.clear()
+    await message.answer("👋 Chiqildi. /start", reply_markup=ReplyKeyboardRemove())
+
+async def main():
+    print("Bot ishga tushdi!")
+    await dp.start_polling(bot)
+
+asyncio.run(main())
